@@ -5,6 +5,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from .validators import year_validator
 
 
+class CustomUser(AbstractUser):
+    pass
+
+
 class Categories(models.Model):
     """Класс для описания категорий произведений."""
 
@@ -69,7 +73,7 @@ class BaseCommentsAndReviews(models.Model):
 class Reviews(BaseCommentsAndReviews):
     """Класс для отзывов на произведения."""
 
-    author = models.ForeignKey('api.CustomUser', related_name='reviews',
+    author = models.ForeignKey('reviews.CustomUser', related_name='reviews',
                                on_delete=models.CASCADE)
     title = models.ForeignKey('Titles', related_name='reviews',
                               on_delete=models.CASCADE)
@@ -89,7 +93,7 @@ class Reviews(BaseCommentsAndReviews):
 class Comments(BaseCommentsAndReviews):
     """Класс комментариев к отзывам."""
 
-    author = models.ForeignKey('api.CustomUser', related_name='comments',
+    author = models.ForeignKey('reviews.CustomUser', related_name='comments',
                                on_delete=models.CASCADE)
     review = models.ForeignKey('Reviews', related_name='comments',
                                on_delete=models.CASCADE)
