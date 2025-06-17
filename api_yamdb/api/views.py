@@ -1,17 +1,31 @@
-from rest_framework import status, viewsets, filters
+from rest_framework import status, filters
+from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.exceptions import NotFound
+from rest_framework.filters import SearchFilter
+from rest_framework.mixins import (
+    CreateModelMixin,
+    ListModelMixin,
+    DestroyModelMixin,
+)
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 
-from reviews.models import CustomUser
+from reviews.models import CustomUser, Category, Genre, Title
 from .permissions import IsAdmin
-from .serializers import SignupSerializer, TokenSerializer, UserSerializer
+from .serializers import (
+    SignupSerializer,
+    TokenSerializer,
+    UserSerializer,
+    CategorySerializer,
+    GenreSerializer,
+    TitleSerializer,
+)
 
 
-class SignupViewSet(viewsets.ViewSet):
+class SignupViewSet(ViewSet):
     permission_classes = [AllowAny]
 
     def create(self, request):
@@ -55,7 +69,7 @@ class SignupViewSet(viewsets.ViewSet):
         )
 
 
-class TokenViewSet(viewsets.ViewSet):
+class TokenViewSet(ViewSet):
     permission_classes = [AllowAny]
 
     def create(self, request):
@@ -84,7 +98,7 @@ class TokenViewSet(viewsets.ViewSet):
             )
 
 
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
@@ -124,3 +138,33 @@ class UserViewSet(viewsets.ModelViewSet):
         user = self.get_object()
         user.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CreateListDeleteViewSet(
+    GenericViewSet, CreateModelMixin, ListModelMixin, DestroyModelMixin
+):
+    pass
+
+
+class CategoryViewSet(CreateListDeleteViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    filter_backends = (SearchFilter,)
+    # permission_classes = (IsAdminOrReadOnly,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+
+class GenreViewSet(CreateListDeleteViewSet):
+    queryset = Genre.objects.all()
+    serializer_class = GenreSerializer
+    filter_backends = (SearchFilter,)
+    # permission_classes = (IsAdminOrReadOnly,)
+    search_fields = ('name',)
+    lookup_field = 'slug'
+
+
+class TitleViewSet(ModelViewSet):
+    queryset = Title.objects.all()
+    serializer_class = TitleSerializer
+    # permission_classes = (IsAdminOrReadOnly,)
