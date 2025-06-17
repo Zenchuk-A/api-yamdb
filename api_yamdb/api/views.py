@@ -2,7 +2,6 @@ from django.shortcuts import render
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework.filters import SearchFilter
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, DestroyModelMixin
-from rest_framework.permissions import IsAdminOrReadOnly
 
 from .serializers import CategorySerializer, GenreSerializer, TitleSerializer
 from reviews.models import Category, Genre, Title

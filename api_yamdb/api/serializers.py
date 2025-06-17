@@ -4,14 +4,14 @@ from django.db.models import Sum
 from reviews.models import CustomUser, Category, Genre, Title, Review, Comment
 
 
-class CategorySerializer(serializers.ModelSerializer):
+class CategorySerializer(ModelSerializer):
 
     class Meta:
         model = Category
         fields = ('name', 'slug')
 
 
-class GenreSerializer(serializers.ModelSerializer):
+class GenreSerializer(ModelSerializer):
 
     class Meta:
         model = Genre
@@ -24,10 +24,10 @@ class TitleSerializer(ModelSerializer):
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
 
     def get_rating(self, obj):
         reviews = obj.reviews
         result = reviews.aggregate(sum_of_ratings=Sum('rating'))
-        return round(result['sum_of_ratings']/reviews.count()) 
+        return round(result['sum_of_ratings'] / reviews.count()) 
         
