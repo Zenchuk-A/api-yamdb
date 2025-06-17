@@ -9,7 +9,7 @@ class CustomUser(AbstractUser):
     pass
 
 
-class Categories(models.Model):
+class Category(models.Model):
     """Класс для описания категорий произведений."""
 
     name = models.CharField('Категория', max_length=256)
@@ -23,7 +23,7 @@ class Categories(models.Model):
         return self.name
 
 
-class Genres(models.Model):
+class Genre(models.Model):
     """Класс для описания жанров произведений."""
 
     name = models.CharField('Жанр', max_length=256)
@@ -37,7 +37,7 @@ class Genres(models.Model):
         return self.name
 
 
-class Titles(models.Model):
+class Title(models.Model):
     """Класс для описания произведения."""
 
     name = models.CharField('Название', max_length=256)
@@ -46,8 +46,8 @@ class Titles(models.Model):
         validators=[year_validator]
     )
     description = models.TextField('Описание', null=True, blank=True)
-    genre = models.ManyToManyField('Genres', related_name='titles')
-    category = models.ForeignKey('Categories', related_name='titles',
+    genre = models.ManyToManyField('Genre', related_name='titles')
+    category = models.ForeignKey('Category', related_name='titles',
                                  on_delete=models.SET_NULL, null=True)
 
     class Meta:
@@ -59,7 +59,7 @@ class Titles(models.Model):
         return self.name
 
 
-class BaseCommentsAndReviews(models.Model):
+class BaseCommentAndReview(models.Model):
     """Базовый класс для отзывов и комментариев."""
 
     pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
@@ -70,12 +70,12 @@ class BaseCommentsAndReviews(models.Model):
         ordering = ('pub_date',)
 
 
-class Reviews(BaseCommentsAndReviews):
+class Review(BaseCommentAndReview):
     """Класс для отзывов на произведения."""
 
-    author = models.ForeignKey('reviews.CustomUser', related_name='reviews',
+    author = models.ForeignKey('CustomUser', related_name='reviews',
                                on_delete=models.CASCADE)
-    title = models.ForeignKey('Titles', related_name='reviews',
+    title = models.ForeignKey('Title', related_name='reviews',
                               on_delete=models.CASCADE)
     score = models.IntegerField(
         'Оценка',
@@ -90,12 +90,12 @@ class Reviews(BaseCommentsAndReviews):
         return self.text
 
 
-class Comments(BaseCommentsAndReviews):
+class Comment(BaseCommentAndReview):
     """Класс комментариев к отзывам."""
 
-    author = models.ForeignKey('reviews.CustomUser', related_name='comments',
+    author = models.ForeignKey('CustomUser', related_name='comments',
                                on_delete=models.CASCADE)
-    review = models.ForeignKey('Reviews', related_name='comments',
+    review = models.ForeignKey('Review', related_name='comments',
                                on_delete=models.CASCADE)
 
     class Meta:
