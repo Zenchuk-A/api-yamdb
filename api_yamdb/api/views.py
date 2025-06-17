@@ -1,3 +1,126 @@
-from django.shortcuts import render
+from rest_framework import status, viewsets, filters
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework.exceptions import NotFound
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
 
-# Create your views here.
+from reviews.models import CustomUser
+from .permissions import IsAdmin
+from .serializers import SignupSerializer, TokenSerializer, UserSerializer
+
+
+class SignupViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def create(self, request):
+        serializer = SignupSerializer(data=request.data)
+        email = request.data.get('email')
+        username = request.data.get('username')
+        if not CustomUser.objects.filter(
+            username=username, email=email
+        ).exists():
+            if (
+                CustomUser.objects.filter(username=username).exists()
+                or username == 'me'
+            ):
+                return Response(
+                    {'error': 'Пользователь с таким username уже существует.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            elif CustomUser.objects.filter(email=email).exists():
+                return Response(
+                    {'error': 'Пользователь с таким email уже существует.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            else:
+                serializer.is_valid(raise_exception=True)
+                user = serializer.save()
+        else:
+            user = CustomUser.objects.get(username=username, email=email)
+
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            'Confirmation Code',
+            f'Your confirmation code is {confirmation_code}',
+            'from@example.com',
+            [user.email],
+            fail_silently=False,
+        )
+
+        return Response(
+            {'username': user.username, 'email': user.email},
+            status=status.HTTP_200_OK,
+        )
+
+
+class TokenViewSet(viewsets.ViewSet):
+    permission_classes = [AllowAny]
+
+    def create(self, request):
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = request.data.get('username')
+        confirmation_code = request.data.get('confirmation_code')
+
+        try:
+            user = CustomUser.objects.get(username=username)
+
+            if default_token_generator.check_token(user, confirmation_code):
+                token = AccessToken.for_user(user)
+                return Response(
+                    {'token': str(token)}, status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {'error': 'Неверный код подтверждения'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        except CustomUser.DoesNotExist:
+            return Response(
+                {'error': 'Пользователь не найден'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAdmin]
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['username']
+
+    def get_object(self):
+        username = self.kwargs.get('username')
+        try:
+            if username == 'me':
+                return self.request.user
+            else:
+                return CustomUser.objects.get(username=username)
+        except CustomUser.DoesNotExist:
+            raise NotFound(detail="Пользователь не найден.")
+
+    def partial_update(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        if 'role' in request.data:
+            if user == request.user or not request.user.is_admin:
+                return Response(
+                    {"detail": "Изменение роли запрещено."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+        return super().partial_update(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+    def destroy(self, request, *args, **kwargs):
+        if self.kwargs.get('username') == 'me':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        user = self.get_object()
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -5,9 +5,32 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from .validators import year_validator
 
 
-class CustomUser(AbstractUser):
-    pass
+class UserRole(models.TextChoices):
+    USER = ('user', 'Аутентифицированный пользователь')
+    MODERATOR = ('moderator', 'Модератор')
+    ADMIN = ('admin', 'Администратор')
 
+
+class CustomUser(AbstractUser):
+    bio = models.TextField('Биография', blank=True)
+    role = models.CharField(
+        'Роль',
+        max_length=10,
+        choices=UserRole.choices,
+        default=UserRole.USER
+    )
+
+    @property
+    def is_authenticated(self):
+        return self.role in [UserRole.USER, UserRole.MODERATOR, UserRole.ADMIN]
+
+    @property
+    def is_moderator(self):
+        return self.role == UserRole.MODERATOR or self.is_superuser
+
+    @property
+    def is_admin(self):
+        return self.role == UserRole.ADMIN or self.is_superuser
 
 class Categories(models.Model):
     """Класс для описания категорий произведений."""
