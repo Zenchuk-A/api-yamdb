@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'api.apps.ApiConfig',
     'reviews.apps.ReviewsConfig',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -58,7 +59,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'api_yamdb.wsgi.application'
 
-REST_FRAMEWORK = { 
+REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),

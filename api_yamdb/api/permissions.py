@@ -1,4 +1,4 @@
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
 
 
 # class IsAdmin(IsAuthenticated):
@@ -15,3 +15,9 @@ class IsAdmin(IsAuthenticated):
         return (
             request.user.is_admin or view.kwargs.get('username', None) == 'me'
         )
+
+
+class ReadOnly(BasePermission):
+    
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS

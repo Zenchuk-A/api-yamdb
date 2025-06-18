@@ -73,6 +73,7 @@ class Title(models.Model):
     genre = models.ManyToManyField('Genre', related_name='titles')
     category = models.ForeignKey('Category', related_name='titles',
                                  on_delete=models.SET_NULL, null=True)
+    rating = models.IntegerField('Рейтинг', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Фильм'

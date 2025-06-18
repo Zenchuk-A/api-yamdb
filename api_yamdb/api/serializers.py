@@ -1,5 +1,5 @@
 from django.core.validators import RegexValidator
-from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from rest_framework.serializers import ModelSerializer, SerializerMethodField, SlugRelatedField
 from rest_framework import serializers
 from django.db.models import Sum
 
@@ -60,6 +60,7 @@ class CategorySerializer(ModelSerializer):
     class Meta:
         model = Category
         fields = ('name', 'slug')
+        lookup_field = 'slug'
 
 
 class GenreSerializer(ModelSerializer):
@@ -67,18 +68,38 @@ class GenreSerializer(ModelSerializer):
     class Meta:
         model = Genre
         fields = ('name', 'slug')
+        lookup_field = 'slug'
 
 
-class TitleSerializer(ModelSerializer):
+class TitleGetSerializer(ModelSerializer):
 
-    rating = SerializerMethodField()
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(read_only=True, many=True)
+    # rating = SerializerMethodField()
 
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
 
-    def get_rating(self, obj):
-        reviews = obj.reviews
-        result = reviews.aggregate(sum_of_ratings=Sum('rating'))
-        return round(result['sum_of_ratings'] / reviews.count()) 
-        
+    # def get_rating(self, obj):
+        # reviews = obj.reviews
+        # result = reviews.aggregate(sum_of_ratings=Sum('rating'))
+        # count = reviews.count()
+        # return round(result['sum_of_ratings'] / count) if count>0 else None
+
+
+class TitleWriteSerializer(ModelSerializer):
+
+    category = SlugRelatedField(
+        queryset=Category.objects.all(),
+        slug_field='slug'
+    )
+    genre = SlugRelatedField(
+        queryset=Genre.objects.all(),
+        slug_field='slug',
+        many=True
+    )
+
+    class Meta:
+        model = Title
+        fields = ('id', 'name', 'year', 'description', 'genre', 'category')
