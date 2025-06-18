@@ -25,16 +25,21 @@ from .serializers import (
 )
 
 
-class SignupViewSet(ViewSet):
+class SignupViewSet(CreateModelMixin, GenericViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = SignupSerializer
     permission_classes = [AllowAny]
 
     def create(self, request):
-        serializer = SignupSerializer(data=request.data)
-        email = request.data.get('email')
-        username = request.data.get('username')
-        if not CustomUser.objects.filter(
+        serializer = self.get_serializer_class()(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        username = serializer.validated_data['username']
+        user = CustomUser.objects.filter(
             username=username, email=email
-        ).exists():
+        ).first()
+
+        if not user:
             if (
                 CustomUser.objects.filter(username=username).exists()
                 or username == 'me'
@@ -49,10 +54,7 @@ class SignupViewSet(ViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             else:
-                serializer.is_valid(raise_exception=True)
                 user = serializer.save()
-        else:
-            user = CustomUser.objects.get(username=username, email=email)
 
         confirmation_code = default_token_generator.make_token(user)
         send_mail(
@@ -69,14 +71,15 @@ class SignupViewSet(ViewSet):
         )
 
 
-class TokenViewSet(ViewSet):
+class TokenViewSet(CreateModelMixin, GenericViewSet):
+    serializer_class = TokenSerializer
     permission_classes = [AllowAny]
 
     def create(self, request):
-        serializer = TokenSerializer(data=request.data)
+        serializer = self.get_serializer_class()(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = request.data.get('username')
-        confirmation_code = request.data.get('confirmation_code')
+        username = serializer.validated_data['username']
+        confirmation_code = serializer.validated_data['confirmation_code']
 
         try:
             user = CustomUser.objects.get(username=username)
@@ -99,7 +102,7 @@ class TokenViewSet(ViewSet):
 
 
 class UserViewSet(ModelViewSet):
-    queryset = CustomUser.objects.all()
+    queryset = CustomUser.objects.all().order_by('username')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -108,23 +111,23 @@ class UserViewSet(ModelViewSet):
 
     def get_object(self):
         username = self.kwargs.get('username')
+        if username == 'me':
+            return self.request.user
         try:
-            if username == 'me':
-                return self.request.user
-            else:
-                return CustomUser.objects.get(username=username)
+            return CustomUser.objects.get(username=username)
         except CustomUser.DoesNotExist:
             raise NotFound(detail="Пользователь не найден.")
 
     def partial_update(self, request, *args, **kwargs):
         user = self.get_object()
 
-        if 'role' in request.data:
-            if user == request.user or not request.user.is_admin:
-                return Response(
-                    {"detail": "Изменение роли запрещено."},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+        if 'role' in request.data and (
+            user == request.user or not request.user.is_admin
+        ):
+            return Response(
+                {"detail": "Изменение роли запрещено."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         return super().partial_update(request, *args, **kwargs)
 
     def retrieve(self, request, *args, **kwargs):
