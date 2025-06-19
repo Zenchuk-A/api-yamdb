@@ -149,7 +149,7 @@ dmypy.json
 media/
 
 requests_*.http
-reviews/admin.py
-reviews/tests.py
-reviews/views.py
+/api_yamdb/reviews/admin.py
+/api_yamdb/reviews/tests.py
+/api_yamdb/reviews/views.py
 sent_emails
