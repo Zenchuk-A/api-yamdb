@@ -14,9 +14,10 @@ from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
+from django.shortcuts import get_object_or_404
 
-from reviews.models import CustomUser, Category, Genre, Title
-from .permissions import IsAdmin, ReadOnly
+from reviews.models import CustomUser, Category, Genre, Title, Review
+from .permissions import IsAdmin, ReadOnly, IsAuthorOrModeratorOrReadOnly
 from .serializers import (
     SignupSerializer,
     TokenSerializer,
@@ -25,6 +26,8 @@ from .serializers import (
     GenreSerializer,
     TitleGetSerializer,
     TitleWriteSerializer,
+    ReviewSerializer,
+    CommentSerializer
 )
 
 
@@ -185,7 +188,11 @@ class TitleFilter(django_filters.FilterSet):
     )
 
 
-class TitleViewSet(ModelViewSet):
+class WithoutPutViewSet(ModelViewSet):
+    http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
+
+
+class TitleViewSet(WithoutPutViewSet):
     queryset = Title.objects.all()
     permission_classes = (IsAdmin | ReadOnly,)
     http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
@@ -196,3 +203,22 @@ class TitleViewSet(ModelViewSet):
         if self.action in ('list', 'retrieve'):
             return TitleGetSerializer
         return TitleWriteSerializer
+
+
+class ReviewViewSet(WithoutPutViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = (IsAuthorOrModeratorOrReadOnly,)
+    http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
+
+    def get_queryset(self):
+        title = get_object_or_404(Title, id=self.kwargs['title_id'])
+        return title.reviews.all()
+
+
+class CommentViewSet(WithoutPutViewSet):
+    serializer_class = CommentSerializer
+    permission_classes = (IsAuthorOrModeratorOrReadOnly,)
+
+    def get_queryset(self):
+        review = get_object_or_404(Review, id=self.kwargs['review_id'])
+        return review.comments.all()

@@ -1,7 +1,8 @@
 from django.core.validators import RegexValidator
 from rest_framework.serializers import ModelSerializer, SerializerMethodField, SlugRelatedField
 from rest_framework import serializers
-from django.db.models import Sum
+from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 
 from reviews.models import CustomUser, Category, Genre, Title, Review, Comment
 
@@ -83,9 +84,8 @@ class TitleGetSerializer(ModelSerializer):
 
     # def get_rating(self, obj):
         # reviews = obj.reviews
-        # result = reviews.aggregate(sum_of_ratings=Sum('rating'))
-        # count = reviews.count()
-        # return round(result['sum_of_ratings'] / count) if count>0 else None
+        # result = reviews.aggregate(avg=Avg('rating'))
+        # return round(result['avg'])
 
 
 class TitleWriteSerializer(ModelSerializer):
@@ -103,3 +103,45 @@ class TitleWriteSerializer(ModelSerializer):
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+
+
+class ReviewSerializer(ModelSerializer):
+    author = SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+    )
+
+    class Meta:
+        model = Review
+        fields = ('id', 'author', 'text', 'score', 'pub_date')
+
+    def validate(self, data):
+        if self.context['request'].method == 'POST':
+            title_id = self.context['view'].kwargs['title_id']
+            title = get_object_or_404(Title, pk=title_id)
+            author = self.context['request'].user
+            if title.reviews.filter(author=author).exists():
+                raise serializers.ValidationError(
+                    'Один автор - один отзыв на произведение')
+            data['author'] = author
+            data['title'] = title
+        return data
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    author = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
+    )
+
+    class Meta:
+        model = Comment
+        fields = ('id', 'author', 'text', 'pub_date')
+        read_only_fields = ('review',)
+
+    def create(self, data):
+        review_id = self.context['view'].kwargs['review_id']
+        review = get_object_or_404(Review, pk=review_id)
+        data['author'] = self.context['request'].user
+        data['review'] = review
+        return super().create(data)
