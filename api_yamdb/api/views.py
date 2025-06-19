@@ -194,8 +194,7 @@ class WithoutPutViewSet(ModelViewSet):
 
 class TitleViewSet(WithoutPutViewSet):
     queryset = Title.objects.all()
-    permission_classes = (IsAdmin | ReadOnly,)
-    http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
+    permission_classes = (IsAdmin | ReadOnly,)    
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
 
@@ -207,8 +206,7 @@ class TitleViewSet(WithoutPutViewSet):
 
 class ReviewViewSet(WithoutPutViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthorOrModeratorOrReadOnly,)
-    http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
+    permission_classes = (IsAuthorOrModeratorOrReadOnly,)    
 
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs['title_id'])
