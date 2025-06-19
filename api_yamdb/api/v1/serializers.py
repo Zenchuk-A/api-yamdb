@@ -3,12 +3,22 @@ from rest_framework.serializers import (
     ModelSerializer,
     SerializerMethodField,
     SlugRelatedField,
+    Serializer,
 )
 from rest_framework import serializers
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 
-from reviews.models import CustomUser, Category, Genre, Title, Review, Comment
+from reviews.models import (
+    UserProfile,
+    Category,
+    Genre,
+    Title,
+    Review,
+    Comment,
+    USERNAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+)
 
 
 username_validator = RegexValidator(
@@ -20,23 +30,29 @@ username_validator = RegexValidator(
 
 class SignupSerializer(ModelSerializer):
     username = serializers.CharField(
-        required=True, max_length=150, validators=[username_validator]
+        required=True,
+        max_length=USERNAME_MAX_LENGTH,
+        validators=[username_validator],
     )
-    email = serializers.EmailField(required=True, max_length=254)
+    email = serializers.EmailField(required=True, max_length=EMAIL_MAX_LENGTH)
 
     class Meta:
-        model = CustomUser
+        model = UserProfile
         fields = ['username', 'email']
 
 
 class TokenSerializer(serializers.Serializer):
-    username = serializers.CharField(required=True, max_length=150)
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_MAX_LENGTH,
+        validators=[username_validator],
+    )
     confirmation_code = serializers.CharField(required=True)
 
 
 class UserSerializer(SignupSerializer):
     class Meta:
-        model = CustomUser
+        model = UserProfile
         fields = [
             'username',
             'email',
@@ -47,14 +63,14 @@ class UserSerializer(SignupSerializer):
         ]
 
     def validate_email(self, value):
-        if CustomUser.objects.filter(email=value).exists():
+        if UserProfile.objects.filter(email=value).exists():
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
             )
         return value
 
     def validate_username(self, value):
-        if value == 'me' or CustomUser.objects.filter(username=value):
+        if value == 'me' or UserProfile.objects.filter(username=value):
             raise serializers.ValidationError(
                 "Пользователь с таким username уже существует."
             )

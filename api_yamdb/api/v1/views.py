@@ -15,8 +15,9 @@ from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
 import django_filters
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 
-from reviews.models import CustomUser, Category, Genre, Title, Review
+from reviews.models import UserProfile, Category, Genre, Title, Review
 from .permissions import IsAdmin, ReadOnly, IsAuthorOrModeratorOrReadOnly
 from .serializers import (
     SignupSerializer,
@@ -32,7 +33,7 @@ from .serializers import (
 
 
 class SignupViewSet(CreateModelMixin, GenericViewSet):
-    queryset = CustomUser.objects.all()
+    queryset = UserProfile.objects.all()
     serializer_class = SignupSerializer
     permission_classes = [AllowAny]
 
@@ -41,20 +42,20 @@ class SignupViewSet(CreateModelMixin, GenericViewSet):
         serializer.is_valid(raise_exception=True)
         email = serializer.validated_data['email']
         username = serializer.validated_data['username']
-        user = CustomUser.objects.filter(
+        user = UserProfile.objects.filter(
             username=username, email=email
         ).first()
 
         if not user:
             if (
-                CustomUser.objects.filter(username=username).exists()
+                UserProfile.objects.filter(username=username).exists()
                 or username == 'me'
             ):
                 return Response(
                     {'error': 'Пользователь с таким username уже существует.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            elif CustomUser.objects.filter(email=email).exists():
+            elif UserProfile.objects.filter(email=email).exists():
                 return Response(
                     {'error': 'Пользователь с таким email уже существует.'},
                     status=status.HTTP_400_BAD_REQUEST,
@@ -66,7 +67,7 @@ class SignupViewSet(CreateModelMixin, GenericViewSet):
         send_mail(
             'Confirmation Code',
             f'Your confirmation code is {confirmation_code}',
-            'from@example.com',
+            settings.EMAIL,
             [user.email],
             fail_silently=False,
         )
@@ -88,7 +89,7 @@ class TokenViewSet(CreateModelMixin, GenericViewSet):
         confirmation_code = serializer.validated_data['confirmation_code']
 
         try:
-            user = CustomUser.objects.get(username=username)
+            user = UserProfile.objects.get(username=username)
 
             if default_token_generator.check_token(user, confirmation_code):
                 token = AccessToken.for_user(user)
@@ -100,7 +101,7 @@ class TokenViewSet(CreateModelMixin, GenericViewSet):
                     {'error': 'Неверный код подтверждения'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        except CustomUser.DoesNotExist:
+        except UserProfile.DoesNotExist:
             return Response(
                 {'error': 'Пользователь не найден'},
                 status=status.HTTP_404_NOT_FOUND,
@@ -108,7 +109,7 @@ class TokenViewSet(CreateModelMixin, GenericViewSet):
 
 
 class UserViewSet(ModelViewSet):
-    queryset = CustomUser.objects.all().order_by('username')
+    queryset = UserProfile.objects.all().order_by('username')
     serializer_class = UserSerializer
     permission_classes = [IsAdmin]
     http_method_names = ['get', 'post', 'patch', 'delete']
@@ -120,8 +121,8 @@ class UserViewSet(ModelViewSet):
         if username == 'me':
             return self.request.user
         try:
-            return CustomUser.objects.get(username=username)
-        except CustomUser.DoesNotExist:
+            return UserProfile.objects.get(username=username)
+        except UserProfile.DoesNotExist:
             raise NotFound(detail="Пользователь не найден.")
 
     def partial_update(self, request, *args, **kwargs):

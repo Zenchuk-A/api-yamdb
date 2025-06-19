@@ -32,13 +32,13 @@ router_v1.register('titles', TitleViewSet, 'titles')
 
 
 urlpatterns = [
-    path('v1/auth/', include(router_v1.urls)),
+    path('auth/', include(router_v1.urls)),
     path(
-        'v1/users/<str:username>/',
+        'users/<str:username>/',
         UserViewSet.as_view(
             {'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'}
         ),
         name='user-detail',
     ),
-    path('v1/', include(router_v1.urls)),
+    path('', include(router_v1.urls)),
 ]
