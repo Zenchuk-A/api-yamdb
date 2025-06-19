@@ -27,7 +27,7 @@ from .serializers import (
     TitleGetSerializer,
     TitleWriteSerializer,
     ReviewSerializer,
-    CommentSerializer
+    CommentSerializer,
 )
 
 
@@ -156,7 +156,7 @@ class CreateListDeleteViewSet(
 
 
 class CategoryViewSet(CreateListDeleteViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.all().order_by('id')
     serializer_class = CategorySerializer
     filter_backends = (SearchFilter,)
     permission_classes = (IsAdmin | ReadOnly,)
@@ -165,7 +165,7 @@ class CategoryViewSet(CreateListDeleteViewSet):
 
 
 class GenreViewSet(CreateListDeleteViewSet):
-    queryset = Genre.objects.all()
+    queryset = Genre.objects.all().order_by('id')
     serializer_class = GenreSerializer
     filter_backends = (SearchFilter,)
     permission_classes = (IsAdmin | ReadOnly,)
@@ -194,7 +194,7 @@ class WithoutPutViewSet(ModelViewSet):
 
 class TitleViewSet(WithoutPutViewSet):
     queryset = Title.objects.all()
-    permission_classes = (IsAdmin | ReadOnly,)    
+    permission_classes = (IsAdmin | ReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
 
@@ -206,11 +206,11 @@ class TitleViewSet(WithoutPutViewSet):
 
 class ReviewViewSet(WithoutPutViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthorOrModeratorOrReadOnly,)    
+    permission_classes = (IsAuthorOrModeratorOrReadOnly,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs['title_id'])
-        return title.reviews.all()
+        return title.reviews.all().order_by('id')
 
 
 class CommentViewSet(WithoutPutViewSet):
@@ -219,4 +219,4 @@ class CommentViewSet(WithoutPutViewSet):
 
     def get_queryset(self):
         review = get_object_or_404(Review, id=self.kwargs['review_id'])
-        return review.comments.all()
+        return review.comments.all().order_by('id')

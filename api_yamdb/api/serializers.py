@@ -1,10 +1,15 @@
 from django.core.validators import RegexValidator
-from rest_framework.serializers import ModelSerializer, SerializerMethodField, SlugRelatedField
+from rest_framework.serializers import (
+    ModelSerializer,
+    SerializerMethodField,
+    SlugRelatedField,
+)
 from rest_framework import serializers
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
 
 from reviews.models import CustomUser, Category, Genre, Title, Review, Comment
+
 
 username_validator = RegexValidator(
     regex=r'^[\w.@+-]+\Z',
@@ -76,28 +81,34 @@ class TitleGetSerializer(ModelSerializer):
 
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    # rating = SerializerMethodField()
+    rating = SerializerMethodField()
 
     class Meta:
         model = Title
-        fields = ('id', 'name', 'year', 'description', 'genre', 'category', 'rating')
+        fields = (
+            'id',
+            'name',
+            'year',
+            'description',
+            'genre',
+            'category',
+            'rating',
+        )
 
-    # def get_rating(self, obj):
-        # reviews = obj.reviews
-        # result = reviews.aggregate(avg=Avg('rating'))
-        # return round(result['avg'])
+    def get_rating(self, obj):
+        average = obj.reviews.aggregate(avg_score=Avg('score'))['avg_score']
+        if average is None:
+            return None
+        return round(average)
 
 
 class TitleWriteSerializer(ModelSerializer):
 
     category = SlugRelatedField(
-        queryset=Category.objects.all(),
-        slug_field='slug'
+        queryset=Category.objects.all(), slug_field='slug'
     )
     genre = SlugRelatedField(
-        queryset=Genre.objects.all(),
-        slug_field='slug',
-        many=True
+        queryset=Genre.objects.all(), slug_field='slug', many=True
     )
 
     class Meta:
@@ -122,7 +133,8 @@ class ReviewSerializer(ModelSerializer):
             author = self.context['request'].user
             if title.reviews.filter(author=author).exists():
                 raise serializers.ValidationError(
-                    'Один автор - один отзыв на произведение')
+                    'Один автор - один отзыв на произведение'
+                )
             data['author'] = author
             data['title'] = title
         return data

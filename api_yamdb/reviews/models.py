@@ -14,10 +14,7 @@ class UserRole(models.TextChoices):
 class CustomUser(AbstractUser):
     bio = models.TextField('Биография', blank=True)
     role = models.CharField(
-        'Роль',
-        max_length=10,
-        choices=UserRole.choices,
-        default=UserRole.USER
+        'Роль', max_length=10, choices=UserRole.choices, default=UserRole.USER
     )
 
     @property
@@ -65,14 +62,12 @@ class Title(models.Model):
     """Класс для описания произведения."""
 
     name = models.CharField('Название', max_length=256)
-    year = models.IntegerField(
-        'Год выпуска',
-        validators=[year_validator]
-    )
+    year = models.IntegerField('Год выпуска', validators=[year_validator])
     description = models.TextField('Описание', null=True, blank=True)
     genre = models.ManyToManyField('Genre', related_name='titles')
-    category = models.ForeignKey('Category', related_name='titles',
-                                 on_delete=models.SET_NULL, null=True)
+    category = models.ForeignKey(
+        'Category', related_name='titles', on_delete=models.SET_NULL, null=True
+    )
     rating = models.IntegerField('Рейтинг', null=True, blank=True)
 
     class Meta:
@@ -98,18 +93,24 @@ class BaseCommentAndReview(models.Model):
 class Review(BaseCommentAndReview):
     """Класс для отзывов на произведения."""
 
-    author = models.ForeignKey('CustomUser', related_name='reviews',
-                               on_delete=models.CASCADE)
-    title = models.ForeignKey('Title', related_name='reviews',
-                              on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        'CustomUser', related_name='reviews', on_delete=models.CASCADE
+    )
+    title = models.ForeignKey(
+        'Title', related_name='reviews', on_delete=models.CASCADE
+    )
     score = models.IntegerField(
-        'Оценка',
-        validators=[MinValueValidator(1), MaxValueValidator(10)]
+        'Оценка', validators=[MinValueValidator(1), MaxValueValidator(10)]
     )
 
     class Meta:
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'title'], name='unique_review_author_title'
+            )
+        ]
 
     def __str__(self):
         return self.text
@@ -118,10 +119,12 @@ class Review(BaseCommentAndReview):
 class Comment(BaseCommentAndReview):
     """Класс комментариев к отзывам."""
 
-    author = models.ForeignKey('CustomUser', related_name='comments',
-                               on_delete=models.CASCADE)
-    review = models.ForeignKey('Review', related_name='comments',
-                               on_delete=models.CASCADE)
+    author = models.ForeignKey(
+        'CustomUser', related_name='comments', on_delete=models.CASCADE
+    )
+    review = models.ForeignKey(
+        'Review', related_name='comments', on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = 'Комментарий'

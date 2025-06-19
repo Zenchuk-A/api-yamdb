@@ -10,7 +10,7 @@ from .views import (
     GenreViewSet,
     TitleViewSet,
     ReviewViewSet,
-    CommentViewSet
+    CommentViewSet,
 )
 
 
@@ -20,8 +20,14 @@ router_v1.register('token', TokenViewSet, basename='token')
 router_v1.register('users', UserViewSet, basename='users')
 router_v1.register('categories', CategoryViewSet, 'categories')
 router_v1.register('genres', GenreViewSet, 'genres')
-router_v1.register(r'titles/(?P<title_id>\d+)/reviews', ReviewViewSet, 'reviews')
-router_v1.register(r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments', CommentViewSet, 'comments')
+router_v1.register(
+    r'titles/(?P<title_id>\d+)/reviews', ReviewViewSet, 'reviews'
+)
+router_v1.register(
+    r'titles/(?P<title_id>\d+)/reviews/(?P<review_id>\d+)/comments',
+    CommentViewSet,
+    'comments',
+)
 router_v1.register('titles', TitleViewSet, 'titles')
 
 
