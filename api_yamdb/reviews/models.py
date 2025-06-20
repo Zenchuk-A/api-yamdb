@@ -106,7 +106,7 @@ class Title(models.Model):
     category = models.ForeignKey(
         'Category', related_name='titles', on_delete=models.SET_NULL, null=True
     )
-    rating = models.IntegerField('Рейтинг', null=True, blank=True)
+    # rating = models.IntegerField('Рейтинг', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Фильм'
@@ -117,18 +117,7 @@ class Title(models.Model):
         return self.name
 
 
-class BaseCommentAndReview(models.Model):
-    """Базовый класс для отзывов и комментариев."""
-
-    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
-    text = models.TextField('Текст')
-
-    class Meta:
-        abstract = True
-        ordering = ('pub_date',)
-
-
-class Review(BaseCommentAndReview):
+class Review(models.Model):
     """Класс для отзывов на произведения."""
 
     author = models.ForeignKey(
@@ -146,6 +135,8 @@ class Review(BaseCommentAndReview):
             MaxValueValidator(SCORE_MAX_VALUE),
         ],
     )
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    text = models.TextField('Текст')
 
     class Meta:
         verbose_name = 'Отзыв'
@@ -155,12 +146,13 @@ class Review(BaseCommentAndReview):
                 fields=['author', 'title'], name='unique_review_author_title'
             )
         ]
+        ordering = ('pub_date',)
 
     def __str__(self):
         return self.text
 
 
-class Comment(BaseCommentAndReview):
+class Comment(models.Model):
     """Класс комментариев к отзывам."""
 
     author = models.ForeignKey(
@@ -171,10 +163,13 @@ class Comment(BaseCommentAndReview):
     review = models.ForeignKey(
         'Review', related_name='comments', on_delete=models.CASCADE
     )
+    pub_date = models.DateTimeField('Дата публикации', auto_now_add=True)
+    text = models.TextField('Текст')
 
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
+        ordering = ('pub_date',)
 
     def __str__(self):
         return self.text

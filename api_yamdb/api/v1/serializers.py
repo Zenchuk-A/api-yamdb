@@ -175,10 +175,7 @@ class TitleGetSerializer(ModelSerializer):
         )
 
     def get_rating(self, obj):
-        average = obj.reviews.aggregate(avg_score=Avg('score'))['avg_score']
-        if average is None:
-            return None
-        return round(average)
+        return round(obj.rating) if obj.rating else None
 
 
 class TitleWriteSerializer(ModelSerializer):
@@ -228,11 +225,3 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ('id', 'author', 'text', 'pub_date')
-        read_only_fields = ('review',)
-
-    def create(self, data):
-        review_id = self.context['view'].kwargs['review_id']
-        review = get_object_or_404(Review, pk=review_id)
-        data['author'] = self.context['request'].user
-        data['review'] = review
-        return super().create(data)

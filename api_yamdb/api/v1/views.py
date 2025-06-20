@@ -6,17 +6,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
-from rest_framework.mixins import (
-    CreateModelMixin,
-    ListModelMixin,
-    DestroyModelMixin,
-)
+from rest_framework.mixins import CreateModelMixin
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import default_token_generator
 from django_filters.rest_framework import DjangoFilterBackend
-import django_filters
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.db.models import Avg
 
 from reviews.models import UserProfile, Category, Genre, Title, Review
 from .permissions import (
@@ -36,6 +32,8 @@ from .serializers import (
     ReviewSerializer,
     CommentSerializer,
 )
+from .viewsets import CreateListDeleteViewSet
+from .filters import TitleFilter
 
 
 @api_view(['POST'])
@@ -121,12 +119,6 @@ class UserViewSet(ModelViewSet):
         return Response(serializer.data)
 
 
-class CreateListDeleteViewSet(
-    GenericViewSet, CreateModelMixin, ListModelMixin, DestroyModelMixin
-):
-    pass
-
-
 class CategoryViewSet(CreateListDeleteViewSet):
     queryset = Category.objects.all().order_by('id')
     serializer_class = CategorySerializer
@@ -145,27 +137,13 @@ class GenreViewSet(CreateListDeleteViewSet):
     lookup_field = 'slug'
 
 
-class TitleFilter(django_filters.FilterSet):
-    category = django_filters.CharFilter(
-        field_name='category__slug',
-    )
-    genre = django_filters.CharFilter(
-        field_name='genre__slug',
-    )
-    name = django_filters.CharFilter(
-        field_name='name',
-    )
-    year = django_filters.NumberFilter(
-        field_name='year',
-    )
-
-
 class WithoutPutViewSet(ModelViewSet):
     http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
 
 
 class TitleViewSet(WithoutPutViewSet):
-    queryset = Title.objects.all()
+    # queryset = Title.objects.all()
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     permission_classes = (IsAdmin | ReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
@@ -190,5 +168,11 @@ class CommentViewSet(WithoutPutViewSet):
     permission_classes = (IsAuthorOrModeratorOrReadOnly,)
 
     def get_queryset(self):
-        review = get_object_or_404(Review, id=self.kwargs['review_id'])
+        review = get_object_or_404(
+            Review, id=self.kwargs['review_id'], title=self.kwargs['title_id'])
         return review.comments.all().order_by('id')
+
+    def perform_create(self, serializer):
+        review_id = self.kwargs['review_id']
+        review = get_object_or_404(Review, pk=review_id)
+        serializer.save(author=self.request.user, review=review)

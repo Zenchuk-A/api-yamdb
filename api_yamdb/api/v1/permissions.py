@@ -9,11 +9,7 @@ from rest_framework.permissions import (
 class IsAdmin(IsAuthenticated):
 
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        return (
-            request.user.is_admin or view.kwargs.get('username', None) == 'me'
-        )
+        return request.user.is_authenticated and request.user.is_admin
 
 
 class ReadOnly(BasePermission):
