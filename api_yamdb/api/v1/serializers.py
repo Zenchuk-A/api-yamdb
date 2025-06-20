@@ -1,4 +1,4 @@
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, EmailValidator
 from rest_framework.serializers import (
     ModelSerializer,
     SerializerMethodField,
@@ -8,6 +8,7 @@ from rest_framework.serializers import (
 from rest_framework import serializers
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
 
 from reviews.models import (
     UserProfile,
@@ -19,7 +20,10 @@ from reviews.models import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
 )
+from reviews.validators import MeNameValidator
 
+
+User = get_user_model()
 
 username_validator = RegexValidator(
     regex=r'^[\w.@+-]+\Z',
@@ -28,20 +32,64 @@ username_validator = RegexValidator(
 )
 
 
-class SignupSerializer(ModelSerializer):
+class SignupSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator],
+        validators=[username_validator, MeNameValidator],
     )
-    email = serializers.EmailField(required=True, max_length=EMAIL_MAX_LENGTH)
+    email = serializers.EmailField(
+        required=True,
+        max_length=EMAIL_MAX_LENGTH,
+        validators=[EmailValidator],
+    )
 
-    class Meta:
-        model = UserProfile
-        fields = ['username', 'email']
+    def validate(self, data):
+        username = data.get('username')
+        email = data.get('email')
+
+        user_by_email = User.objects.filter(email=email).first()
+        user_by_username = User.objects.filter(username=username).first()
+
+        if (
+            user_by_email
+            and user_by_username
+            and user_by_email != user_by_username
+        ):
+            error_msg = {}
+            if user_by_email:
+                error_msg['email'] = (
+                    'Пользователь с таким email уже существует.'
+                )
+            if user_by_username:
+                error_msg['username'] = (
+                    'Пользователь с таким username уже существует.'
+                )
+            raise serializers.ValidationError(error_msg)
+
+        if user_by_username and (
+            not user_by_email or user_by_email == user_by_username
+        ):
+            if user_by_username.email != email:
+                raise serializers.ValidationError(
+                    {'email': 'Email уже используется другим пользователем.'}
+                )
+
+        if user_by_email and (
+            not user_by_username or user_by_username == user_by_email
+        ):
+            if user_by_email.username != username:
+                raise serializers.ValidationError(
+                    {
+                        'username':
+                        'Username уже используется другим пользователем.'
+                    }
+                )
+
+        return data
 
 
-class TokenSerializer(serializers.Serializer):
+class TokenSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
@@ -50,7 +98,14 @@ class TokenSerializer(serializers.Serializer):
     confirmation_code = serializers.CharField(required=True)
 
 
-class UserSerializer(SignupSerializer):
+class UserSerializer(ModelSerializer):
+
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_MAX_LENGTH,
+        validators=[username_validator, MeNameValidator],
+    )
+
     class Meta:
         model = UserProfile
         fields = [
@@ -75,6 +130,14 @@ class UserSerializer(SignupSerializer):
                 "Пользователь с таким username уже существует."
             )
         return value
+
+    def update(self, instance, validated_data):
+        request = self.context.get('request')
+        if request and not (
+            request.user.is_authenticated and request.user.is_admin
+        ):
+            validated_data.pop('role', None)
+        return super().update(instance, validated_data)
 
 
 class CategorySerializer(ModelSerializer):
