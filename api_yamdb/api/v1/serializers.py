@@ -72,7 +72,10 @@ class SignupSerializer(Serializer):
         ):
             if user_by_username.email != email:
                 raise serializers.ValidationError(
-                    {'email': 'Email уже используется другим пользователем.'}
+                    {
+                        'username':
+                        'Username уже используется другим пользователем.'
+                    }
                 )
 
         if user_by_email and (
@@ -80,10 +83,7 @@ class SignupSerializer(Serializer):
         ):
             if user_by_email.username != username:
                 raise serializers.ValidationError(
-                    {
-                        'username':
-                        'Username уже используется другим пользователем.'
-                    }
+                    {'email': 'Email уже используется другим пользователем.'}
                 )
 
         return data
