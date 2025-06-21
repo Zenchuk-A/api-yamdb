@@ -182,14 +182,23 @@ class TitleWriteSerializer(ModelSerializer):
 
     category = SlugRelatedField(
         queryset=Category.objects.all(), slug_field='slug'
-    )
+    )    
     genre = SlugRelatedField(
-        queryset=Genre.objects.all(), slug_field='slug', many=True
+        queryset=Genre.objects.all(),
+        slug_field='slug',
+        many=True, allow_empty=False, allow_null=False
     )
 
     class Meta:
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['rating'] = 0
+        representation['category'] = CategorySerializer(instance.category).data
+        representation['genre'] = GenreSerializer(instance.genre, many=True).data
+        return representation
 
 
 class ReviewSerializer(ModelSerializer):
@@ -205,14 +214,11 @@ class ReviewSerializer(ModelSerializer):
     def validate(self, data):
         if self.context['request'].method == 'POST':
             title_id = self.context['view'].kwargs['title_id']
-            title = get_object_or_404(Title, pk=title_id)
             author = self.context['request'].user
-            if title.reviews.filter(author=author).exists():
+            if Review.objects.all().filter(author=author, title=title_id).exists():
                 raise serializers.ValidationError(
                     'Один автор - один отзыв на произведение'
                 )
-            data['author'] = author
-            data['title'] = title
         return data
 
 

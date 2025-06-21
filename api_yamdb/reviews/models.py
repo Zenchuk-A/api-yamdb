@@ -76,7 +76,7 @@ class Category(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'Категория произведения: {self.name}'
 
 
 class Genre(models.Model):
@@ -93,7 +93,7 @@ class Genre(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'Жанр произведения: {self.name}'
 
 
 class Title(models.Model):
@@ -149,7 +149,7 @@ class Review(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return self.text
+        return f'Отзыв на произведение: {self.name}'
 
 
 class Comment(models.Model):
@@ -172,4 +172,4 @@ class Comment(models.Model):
         ordering = ('pub_date',)
 
     def __str__(self):
-        return self.text
+        return f'Комментарий к отзыву: {self.name}'
