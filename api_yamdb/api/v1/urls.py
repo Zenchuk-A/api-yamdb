@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 
 
 from .views import (
-    # SignupViewSet,
     signup_view,
     TokenViewSet,
     UserViewSet,
@@ -16,7 +15,6 @@ from .views import (
 
 
 router_v1 = DefaultRouter()
-# router_v1.register('signup', SignupViewSet, basename='signup')
 router_v1.register('token', TokenViewSet, basename='token')
 router_v1.register('users', UserViewSet, basename='users')
 router_v1.register('categories', CategoryViewSet, 'categories')
