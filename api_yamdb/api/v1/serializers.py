@@ -116,14 +116,25 @@ class UserSerializer(ModelSerializer):
         ]
 
     def validate_email(self, value):
-        if UserProfile.objects.filter(email=value).exists():
+        user = self.instance
+        if (
+            UserProfile.objects.filter(email=value)
+            .exclude(pk=user.pk if user else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
             )
         return value
 
     def validate_username(self, value):
-        if value == 'me' or UserProfile.objects.filter(username=value):
+        user = self.instance
+        if (
+            value == 'me'
+            or UserProfile.objects.filter(username=value)
+            .exclude(pk=user.pk if user else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
                 "Пользователь с таким username уже существует."
             )
