@@ -4,7 +4,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
-from .validators import year_validator, MeNameValidator
+from .validators import year_validator, menamevalidator
 
 
 USER_ROLE_MAX_LENGTH = 10
@@ -35,7 +35,7 @@ class UserProfile(AbstractUser):
         'Логин',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        validators=[UnicodeUsernameValidator, MeNameValidator],
+        validators=[UnicodeUsernameValidator, menamevalidator],
     )
     bio = models.TextField('Биография', blank=True)
     role = models.CharField(
