@@ -141,8 +141,10 @@ class WithoutPutViewSet(ModelViewSet):
     http_method_names = ('get', 'head', 'options', 'post', 'delete', 'patch')
 
 
-class TitleViewSet(WithoutPutViewSet):    
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+class TitleViewSet(WithoutPutViewSet):
+    queryset = Title.objects.annotate(rating=Avg('reviews__score')).order_by(
+        'id'
+    )
     permission_classes = (IsAdmin | ReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
@@ -160,11 +162,11 @@ class ReviewViewSet(WithoutPutViewSet):
     def get_queryset(self):
         title = get_object_or_404(Title, id=self.kwargs['title_id'])
         return title.reviews.all().order_by('id')
-    
+
     def perform_create(self, serializer):
-        title_id = self.kwargs['title_id']        
-        title = get_object_or_404(Title, pk=title_id)        
-        serializer.save(author=self.request.user, title=title)        
+        title_id = self.kwargs['title_id']
+        title = get_object_or_404(Title, pk=title_id)
+        serializer.save(author=self.request.user, title=title)
 
 
 class CommentViewSet(WithoutPutViewSet):
@@ -173,7 +175,8 @@ class CommentViewSet(WithoutPutViewSet):
 
     def get_queryset(self):
         review = get_object_or_404(
-            Review, id=self.kwargs['review_id'], title=self.kwargs['title_id'])
+            Review, id=self.kwargs['review_id'], title=self.kwargs['title_id']
+        )
         return review.comments.all().order_by('id')
 
     def perform_create(self, serializer):
