@@ -7,8 +7,6 @@ from rest_framework.serializers import (
     Serializer,
 )
 from rest_framework import serializers
-from django.db.models import Avg
-from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 
 from reviews.models import (
@@ -21,7 +19,7 @@ from reviews.models import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
 )
-from reviews.validators import MeNameValidator
+from reviews.validators import menamevalidator
 
 
 User = get_user_model()
@@ -37,7 +35,7 @@ class SignupSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator, MeNameValidator],
+        validators=[username_validator, menamevalidator],
     )
     email = serializers.EmailField(
         required=True,
@@ -104,7 +102,7 @@ class UserSerializer(ModelSerializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator, MeNameValidator],
+        validators=[username_validator, menamevalidator],
     )
 
     class Meta:
@@ -119,14 +117,25 @@ class UserSerializer(ModelSerializer):
         ]
 
     def validate_email(self, value):
-        if UserProfile.objects.filter(email=value).exists():
+        user = self.instance
+        if (
+            UserProfile.objects.filter(email=value)
+            .exclude(pk=user.pk if user else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
                 "Пользователь с таким email уже существует."
             )
         return value
 
     def validate_username(self, value):
-        if value == 'me' or UserProfile.objects.filter(username=value):
+        user = self.instance
+        if (
+            value == 'me'
+            or UserProfile.objects.filter(username=value)
+            .exclude(pk=user.pk if user else None)
+            .exists()
+        ):
             raise serializers.ValidationError(
                 "Пользователь с таким username уже существует."
             )
@@ -181,10 +190,13 @@ class TitleWriteSerializer(ModelSerializer):
     category = SlugRelatedField(
         queryset=Category.objects.all(), slug_field='slug'
     )
+    )
     genre = SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
-        many=True, allow_empty=False, allow_null=False
+        many=True,
+        allow_empty=False,
+        allow_null=False,
     )
 
     class Meta:
@@ -209,7 +221,11 @@ class ReviewSerializer(ModelSerializer):
         if self.context['request'].method == 'POST':
             title_id = self.context['view'].kwargs['title_id']
             author = self.context['request'].user
-            if Review.objects.all().filter(author=author, title=title_id).exists():
+            if (
+                Review.objects.all()
+                .filter(author=author, title=title_id)
+                .exists()
+            ):
                 raise serializers.ValidationError(
                     'Один автор - один отзыв на произведение'
                 )
