@@ -106,15 +106,14 @@ class Title(models.Model):
     category = models.ForeignKey(
         'Category', related_name='titles', on_delete=models.SET_NULL, null=True
     )
-    # rating = models.IntegerField('Рейтинг', null=True, blank=True)
 
     class Meta:
-        verbose_name = 'Фильм'
-        verbose_name_plural = 'Фильмы'
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return f'Произведение: {self.name}'
 
 
 class Review(models.Model):

@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator, EmailValidator
 from rest_framework.serializers import (
     ModelSerializer,
     SerializerMethodField,
+    IntegerField,
     SlugRelatedField,
     Serializer,
 )
@@ -160,7 +161,7 @@ class TitleGetSerializer(ModelSerializer):
 
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(read_only=True, many=True)
-    rating = SerializerMethodField()
+    rating = IntegerField(default=None)
 
     class Meta:
         model = Title
@@ -174,15 +175,12 @@ class TitleGetSerializer(ModelSerializer):
             'rating',
         )
 
-    def get_rating(self, obj):
-        return round(obj.rating) if obj.rating else None
-
 
 class TitleWriteSerializer(ModelSerializer):
 
     category = SlugRelatedField(
         queryset=Category.objects.all(), slug_field='slug'
-    )    
+    )
     genre = SlugRelatedField(
         queryset=Genre.objects.all(),
         slug_field='slug',
@@ -194,11 +192,7 @@ class TitleWriteSerializer(ModelSerializer):
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
     def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation['rating'] = 0
-        representation['category'] = CategorySerializer(instance.category).data
-        representation['genre'] = GenreSerializer(instance.genre, many=True).data
-        return representation
+        return TitleGetSerializer(instance).data
 
 
 class ReviewSerializer(ModelSerializer):
