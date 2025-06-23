@@ -60,7 +60,7 @@ class TokenSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[UnicodeUsernameValidator()],
+        validators=[UnicodeUsernameValidator(), forbidden_names_validator],
     )
     confirmation_code = serializers.CharField(required=True)
 
@@ -81,9 +81,7 @@ class UserSerializer(ModelSerializer):
 
 class UserUpdateSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
-        read_only_fields = getattr(
-            UserSerializer.Meta, 'read_only_fields', ()
-        ) + ('role',)
+        read_only_fields = ('role',)
 
 
 class CategorySerializer(ModelSerializer):

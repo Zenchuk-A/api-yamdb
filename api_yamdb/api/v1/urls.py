@@ -16,6 +16,7 @@ from .views import (
 router_v1_auth = DefaultRouter()
 router_v1_auth.register('token', TokenViewSet, basename='token')
 router_v1 = DefaultRouter()
+router_v1.register('token', TokenViewSet, basename='token')
 router_v1.register('users', UserViewSet, basename='users')
 router_v1.register('categories', CategoryViewSet, 'categories')
 router_v1.register('genres', GenreViewSet, 'genres')
