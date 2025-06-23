@@ -101,7 +101,7 @@ class Title(models.Model):
 
     name = models.CharField('Название', max_length=TITLE_MAX_LENGTH)
     year = models.SmallIntegerField('Год выпуска', validators=[year_validator])
-    description = models.TextField('Описание', null=True, blank=True)
+    description = models.TextField('Описание', blank=True, default='')
     genre = models.ManyToManyField('Genre', related_name='titles')
     category = models.ForeignKey(
         'Category', related_name='titles', on_delete=models.SET_NULL, null=True
