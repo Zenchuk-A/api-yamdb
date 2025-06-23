@@ -19,7 +19,6 @@ from .permissions import (
     IsAdmin,
     ReadOnly,
     IsAuthorOrModeratorOrReadOnly,
-    IsAdminOrReadOnlyRole,
 )
 from .serializers import (
     SignupSerializer,
