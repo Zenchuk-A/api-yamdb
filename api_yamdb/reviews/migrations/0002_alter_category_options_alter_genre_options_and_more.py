@@ -37,6 +37,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofile',
             name='username',
-            field=models.CharField(max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator, reviews.validators.menamevalidator], verbose_name='Логин'),
+            field=models.CharField(max_length=150, unique=True, validators=[django.contrib.auth.validators.UnicodeUsernameValidator, reviews.validators.forbidden_names_validator], verbose_name='Логин'),
         ),
     ]

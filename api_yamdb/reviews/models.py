@@ -4,7 +4,7 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 
-from .validators import year_validator, menamevalidator
+from .validators import year_validator, forbidden_names_validator
 
 
 USER_ROLE_MAX_LENGTH = 10
@@ -35,7 +35,7 @@ class UserProfile(AbstractUser):
         'Логин',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        validators=[UnicodeUsernameValidator, menamevalidator],
+        validators=[UnicodeUsernameValidator(), forbidden_names_validator],
     )
     bio = models.TextField('Биография', blank=True)
     role = models.CharField(
@@ -51,7 +51,7 @@ class UserProfile(AbstractUser):
         ordering = ('username',)
 
     def __str__(self):
-        return self.username
+        return f'Пользователь: {self.username}'
 
     @property
     def is_moderator(self):

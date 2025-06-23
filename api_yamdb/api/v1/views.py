@@ -25,6 +25,7 @@ from .serializers import (
     SignupSerializer,
     TokenSerializer,
     UserSerializer,
+    UserUpdateSerializer,
     CategorySerializer,
     GenreSerializer,
     TitleGetSerializer,
@@ -48,12 +49,6 @@ def signup_view(request):
     user, created = UserProfile.objects.get_or_create(
         username=username, defaults={'email': email}
     )
-
-    if not created and user.email != email:
-        return Response(
-            {'error': 'Пользователь с таким username уже существует.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
     confirmation_code = default_token_generator.make_token(user)
     send_mail(
@@ -94,7 +89,7 @@ class TokenViewSet(CreateModelMixin, GenericViewSet):
 class UserViewSet(ModelViewSet):
     queryset = UserProfile.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin, IsAdminOrReadOnlyRole]
+    permission_classes = [IsAdmin]
     lookup_field = 'username'
     http_method_names = ['get', 'post', 'patch', 'delete']
     filter_backends = [SearchFilter]
@@ -113,7 +108,9 @@ class UserViewSet(ModelViewSet):
             serializer = self.get_serializer(user)
             return Response(serializer.data)
 
-        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer = UserUpdateSerializer(
+            user, data=request.data, partial=True
+        )
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -142,7 +139,9 @@ class WithoutPutViewSet(ModelViewSet):
 
 
 class TitleViewSet(WithoutPutViewSet):
-    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
+    queryset = Title.objects.annotate(rating=Avg('reviews__score')).order_by(
+        'id'
+    )
     permission_classes = (IsAdmin | ReadOnly,)
     filter_backends = (DjangoFilterBackend, SearchFilter)
     filterset_class = TitleFilter
@@ -173,7 +172,8 @@ class CommentViewSet(WithoutPutViewSet):
 
     def get_review(self):
         return get_object_or_404(
-            Review, id=self.kwargs['review_id'], title=self.kwargs['title_id'])
+            Review, id=self.kwargs['review_id'], title=self.kwargs['title_id']
+        )
 
     def get_queryset(self):
         return self.get_review().comments.all().order_by('id')

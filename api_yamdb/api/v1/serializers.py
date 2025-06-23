@@ -1,16 +1,14 @@
-from django.core.validators import RegexValidator, EmailValidator
 from rest_framework.serializers import (
     ModelSerializer,
-    SerializerMethodField,
     IntegerField,
     SlugRelatedField,
     Serializer,
 )
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.auth.validators import UnicodeUsernameValidator
 
 from reviews.models import (
-    UserProfile,
     Category,
     Genre,
     Title,
@@ -19,28 +17,21 @@ from reviews.models import (
     USERNAME_MAX_LENGTH,
     EMAIL_MAX_LENGTH,
 )
-from reviews.validators import menamevalidator
+from reviews.validators import forbidden_names_validator
 
 
 User = get_user_model()
-
-username_validator = RegexValidator(
-    regex=r'^[\w.@+-]+\Z',
-    message='Username must be alphanumeric and '
-    'can contain @ . + - _ characters.',
-)
 
 
 class SignupSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator, menamevalidator],
+        validators=[UnicodeUsernameValidator(), forbidden_names_validator],
     )
     email = serializers.EmailField(
         required=True,
         max_length=EMAIL_MAX_LENGTH,
-        validators=[EmailValidator],
     )
 
     def validate(self, data):
@@ -50,11 +41,7 @@ class SignupSerializer(Serializer):
         user_by_email = User.objects.filter(email=email).first()
         user_by_username = User.objects.filter(username=username).first()
 
-        if (
-            user_by_email
-            and user_by_username
-            and user_by_email != user_by_username
-        ):
+        if user_by_email != user_by_username:
             error_msg = {}
             if user_by_email:
                 error_msg['email'] = (
@@ -66,25 +53,6 @@ class SignupSerializer(Serializer):
                 )
             raise serializers.ValidationError(error_msg)
 
-        if user_by_username and (
-            not user_by_email or user_by_email == user_by_username
-        ):
-            if user_by_username.email != email:
-                raise serializers.ValidationError(
-                    {
-                        'username':
-                        'Username уже используется другим пользователем.'
-                    }
-                )
-
-        if user_by_email and (
-            not user_by_username or user_by_username == user_by_email
-        ):
-            if user_by_email.username != username:
-                raise serializers.ValidationError(
-                    {'email': 'Email уже используется другим пользователем.'}
-                )
-
         return data
 
 
@@ -92,21 +60,15 @@ class TokenSerializer(Serializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator],
+        validators=[UnicodeUsernameValidator()],
     )
     confirmation_code = serializers.CharField(required=True)
 
 
 class UserSerializer(ModelSerializer):
 
-    username = serializers.CharField(
-        required=True,
-        max_length=USERNAME_MAX_LENGTH,
-        validators=[username_validator, menamevalidator],
-    )
-
     class Meta:
-        model = UserProfile
+        model = User
         fields = [
             'username',
             'email',
@@ -116,38 +78,12 @@ class UserSerializer(ModelSerializer):
             'role',
         ]
 
-    def validate_email(self, value):
-        user = self.instance
-        if (
-            UserProfile.objects.filter(email=value)
-            .exclude(pk=user.pk if user else None)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                "Пользователь с таким email уже существует."
-            )
-        return value
 
-    def validate_username(self, value):
-        user = self.instance
-        if (
-            value == 'me'
-            or UserProfile.objects.filter(username=value)
-            .exclude(pk=user.pk if user else None)
-            .exists()
-        ):
-            raise serializers.ValidationError(
-                "Пользователь с таким username уже существует."
-            )
-        return value
-
-    def update(self, instance, validated_data):
-        request = self.context.get('request')
-        if request and not (
-            request.user.is_authenticated and request.user.is_admin
-        ):
-            validated_data.pop('role', None)
-        return super().update(instance, validated_data)
+class UserUpdateSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        read_only_fields = getattr(
+            UserSerializer.Meta, 'read_only_fields', ()
+        ) + ('role',)
 
 
 class CategorySerializer(ModelSerializer):
@@ -189,7 +125,6 @@ class TitleWriteSerializer(ModelSerializer):
 
     category = SlugRelatedField(
         queryset=Category.objects.all(), slug_field='slug'
-    )
     )
     genre = SlugRelatedField(
         queryset=Genre.objects.all(),
